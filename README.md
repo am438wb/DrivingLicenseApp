@@ -128,7 +128,7 @@ Seven unit tests cover illegal transitions, audit creation, age validation, each
 
 ## Intentional shortcuts and production next steps
 
-This is scoped to a 6–8 hour exercise. Checked-in EF migrations keep `docker compose up` self-contained; production should run reviewed migrations from a single deployment job rather than application startup. Other next steps:
+Checked-in EF migrations keep `docker compose up` self-contained; production should run reviewed migrations from a single deployment job rather than application startup. Other next steps:
 
 - replace the local reviewer API key with identity-provider authentication, reviewer roles, and reviewer identity in the audit record;
 - request-rate limits;
