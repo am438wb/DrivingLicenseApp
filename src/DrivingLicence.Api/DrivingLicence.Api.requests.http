@@ -1,0 +1,25 @@
+@host = http://localhost:8080
+@applicationId = 00000000-0000-0000-0000-000000000000
+
+GET {{host}}/api/applications/{{applicationId}}
+Accept: application/json
+
+###
+
+GET {{host}}/api/applications/{{applicationId}}/history
+Accept: application/json
+
+###
+
+POST {{host}}/api/applications/{{applicationId}}/approve
+X-Reviewer-Key: dev-reviewer-key
+
+###
+
+POST {{host}}/api/applications/{{applicationId}}/reject
+Content-Type: application/json
+X-Reviewer-Key: dev-reviewer-key
+
+{
+  "reason": "Photo does not meet quality requirements"
+}

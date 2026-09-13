@@ -1,0 +1,50 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: src/DrivingLicence.Web/Dockerfile
+    ports: ["8081:8080"]
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ApiBaseUrl: http://api:8080
+      Reviewer__ApiKey: dev-reviewer-key
+    depends_on: [api]
+    restart: unless-stopped
+  api:
+    build:
+      context: .
+      dockerfile: src/DrivingLicence.Api/Dockerfile
+    ports: ["8080:8080"]
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Database: Host=database;Database=licences;Username=postgres;Password=postgres
+      RabbitMq__Host: queue
+      PhotoStorage__Path: /data/photos
+      Reviewer__ApiKey: dev-reviewer-key
+    volumes: ["photos:/data/photos"]
+    depends_on:
+      database: { condition: service_healthy }
+      queue: { condition: service_healthy }
+    restart: unless-stopped
+  worker:
+    build:
+      context: .
+      dockerfile: src/DrivingLicence.Worker/Dockerfile
+    environment:
+      ConnectionStrings__Database: Host=database;Database=licences;Username=postgres;Password=postgres
+      RabbitMq__Host: queue
+    depends_on:
+      database: { condition: service_healthy }
+      queue: { condition: service_healthy }
+    restart: unless-stopped
+  database:
+    image: postgres:16-alpine
+    environment: { POSTGRES_DB: licences, POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres }
+    ports: ["5432:5432"]
+    volumes: ["postgres:/var/lib/postgresql/data"]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U postgres -d licences"], interval: 5s, timeout: 3s, retries: 10 }
+  queue:
+    image: rabbitmq:3-management-alpine
+    ports: ["5672:5672", "15672:15672"]
+    healthcheck: { test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"], interval: 5s, timeout: 5s, retries: 12 }
+volumes: { postgres: {}, photos: {} }

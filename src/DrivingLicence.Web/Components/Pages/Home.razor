@@ -1,0 +1,90 @@
+@page "/"
+
+<PageTitle>Licence applications</PageTitle>
+
+<RadzenStack Gap="1.5rem">
+    <div>
+        <RadzenText TextStyle="TextStyle.H3">Driving licence onboarding</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1">Submit an application and follow its asynchronous workflow in real time.</RadzenText>
+    </div>
+
+    <RadzenTabs>
+        <Tabs>
+            <RadzenTabsItem Text="New application" Icon="person_add">
+                <RadzenCard Style="margin-top:1rem; max-width:900px">
+                    <RadzenTemplateForm TItem="NewApplication" Data="@model" Submit="@Submit">
+                        <RadzenRow Gap="1rem">
+                            <RadzenColumn SizeMD="6"><RadzenFormField Text="First name" Style="width:100%"><RadzenTextBox @bind-Value="model.FirstName" Name="FirstName" Style="width:100%" /><RadzenRequiredValidator Component="FirstName" Text="Required" /></RadzenFormField></RadzenColumn>
+                            <RadzenColumn SizeMD="6"><RadzenFormField Text="Last name" Style="width:100%"><RadzenTextBox @bind-Value="model.LastName" Name="LastName" Style="width:100%" /><RadzenRequiredValidator Component="LastName" Text="Required" /></RadzenFormField></RadzenColumn>
+                            <RadzenColumn SizeMD="6"><RadzenFormField Text="Date of birth" Style="width:100%"><RadzenDatePicker @bind-Value="model.DateOfBirth" Name="DateOfBirth" DateFormat="yyyy-MM-dd" Style="width:100%" /></RadzenFormField></RadzenColumn>
+                            <RadzenColumn SizeMD="6"><RadzenFormField Text="National ID" Style="width:100%"><RadzenTextBox @bind-Value="model.NationalId" Name="NationalId" Style="width:100%" /><RadzenRequiredValidator Component="NationalId" Text="Required" /></RadzenFormField></RadzenColumn>
+                            <RadzenColumn SizeMD="6"><RadzenFormField Text="Email" Style="width:100%"><RadzenTextBox @bind-Value="model.Email" Name="Email" Style="width:100%" /><RadzenRequiredValidator Component="Email" Text="Required" /></RadzenFormField></RadzenColumn>
+                            <RadzenColumn SizeMD="6"><RadzenFormField Text="Phone" Style="width:100%"><RadzenTextBox @bind-Value="model.PhoneNumber" Name="Phone" Style="width:100%" /><RadzenRequiredValidator Component="Phone" Text="Required" /></RadzenFormField></RadzenColumn>
+                            <RadzenColumn SizeMD="8"><RadzenFormField Text="Address" Style="width:100%"><RadzenTextBox @bind-Value="model.Address" Name="Address" Style="width:100%" /><RadzenRequiredValidator Component="Address" Text="Required" /></RadzenFormField></RadzenColumn>
+                            <RadzenColumn SizeMD="4"><RadzenFormField Text="Category" Style="width:100%"><RadzenDropDown @bind-Value="model.LicenceCategory" Data="categories" Style="width:100%" /></RadzenFormField></RadzenColumn>
+                            <RadzenColumn Size="12">
+                                <RadzenFieldset Text="Face photo">
+                                    <label class="rz-button rz-button-md rz-variant-filled rz-primary photo-picker">
+                                        <RadzenIcon Icon="image" />
+                                        <span>Choose face photo</span>
+                                        <InputFile @key="photoPickerKey" OnChange="OnPhotoChanged" accept="image/jpeg,image/png" />
+                                    </label>
+                                    @if (photo is not null)
+                                    {
+                                        <RadzenBadge Text="@($"{photo.Name} ({photo.Size / 1024} KB)")" Icon="image" BadgeStyle="BadgeStyle.Info" Style="margin-top:.75rem" />
+                                    }
+                                    <RadzenText TextStyle="TextStyle.Caption">JPEG or PNG, maximum 5 MB.</RadzenText>
+                                </RadzenFieldset>
+                            </RadzenColumn>
+                        </RadzenRow>
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap=".75rem" Style="margin-top:1.5rem">
+                            <RadzenButton Text="Submit application" Icon="send" ButtonType="ButtonType.Submit" IsBusy="submitting" Disabled="@(photo is null)" />
+                            <RadzenButton Text="Clear form" Icon="restart_alt" ButtonType="ButtonType.Button" ButtonStyle="ButtonStyle.Light" Click="ClearForm" Disabled="submitting" />
+                        </RadzenStack>
+                    </RadzenTemplateForm>
+                </RadzenCard>
+            </RadzenTabsItem>
+
+            <RadzenTabsItem Text="Track & review" Icon="fact_check">
+                <RadzenCard Style="margin-top:1rem">
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.End" Gap="1rem" Wrap="FlexWrap.Wrap">
+                        <RadzenFormField Text="Application ID" Style="min-width:360px"><RadzenTextBox @bind-Value="lookupId" Style="width:100%" /></RadzenFormField>
+                        <RadzenButton Text="Load" Icon="refresh" Click="@Load" IsBusy="loading" />
+                    </RadzenStack>
+                    @if (current is not null)
+                    {
+                        <hr />
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap">
+                            <RadzenText TextStyle="TextStyle.H5">@current.ApplicationId</RadzenText>
+                            <RadzenBadge Text="@current.Status" BadgeStyle="@BadgeFor(current.Status)" />
+                        </RadzenStack>
+                        @if (current.Status == "PendingManualReview")
+                        {
+                            <RadzenStack Gap=".75rem" Style="margin:1rem 0; max-width:680px">
+                                <RadzenFormField Text="Rejection reason" Style="width:100%">
+                                    <RadzenTextArea @bind-Value="rejectReason" Name="RejectionReason" Rows="3"
+                                                    MaxLength="500" Placeholder="Explain why the application is being rejected"
+                                                    Style="width:100%" />
+                                </RadzenFormField>
+                                <RadzenText TextStyle="TextStyle.Caption">A reason of at least 3 characters is required when rejecting.</RadzenText>
+                            </RadzenStack>
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap=".75rem" Style="margin:1rem 0" Wrap="FlexWrap.Wrap">
+                                <RadzenButton Text="Approve" Icon="check_circle" ButtonStyle="ButtonStyle.Success" Click="@Approve" />
+                                <RadzenButton Text="Reject" Icon="cancel" ButtonStyle="ButtonStyle.Danger" Click="@Reject" Disabled="@(!CanReject)" />
+                            </RadzenStack>
+                        }
+                        <RadzenDataGrid Data="history" TItem="HistoryEntry" AllowPaging="true" PageSize="10" EmptyText="No transitions recorded yet" Style="margin-top:1rem">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="HistoryEntry" Property="Timestamp" Title="Time" FormatString="{0:u}" />
+                                <RadzenDataGridColumn TItem="HistoryEntry" Property="FromStatus" Title="From" />
+                                <RadzenDataGridColumn TItem="HistoryEntry" Property="ToStatus" Title="To" />
+                                <RadzenDataGridColumn TItem="HistoryEntry" Property="Event" Title="Event" />
+                                <RadzenDataGridColumn TItem="HistoryEntry" Property="Details" Title="Details" />
+                            </Columns>
+                        </RadzenDataGrid>
+                    }
+                </RadzenCard>
+            </RadzenTabsItem>
+        </Tabs>
+    </RadzenTabs>
+</RadzenStack>

@@ -1,0 +1,37 @@
+# Build output
+**/bin/
+**/obj/
+
+# IDE and user-specific state
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Aspire and local runtime state
+.aspire/
+**/photos/
+
+# Test and coverage output
+TestResults/
+**/TestResults/
+coverage/
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+
+# Local configuration and secrets
+appsettings.Local.json
+appsettings.*.Local.json
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db

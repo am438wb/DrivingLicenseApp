@@ -1,0 +1,8 @@
+**/bin
+**/obj
+.git
+.vs
+**/photos
+**/TestResults
+*.user
+.aspire
