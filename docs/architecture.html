@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Driving Licence Onboarding — Architecture and Technical Review</title>
+  <style>
+    :root { --ink:#172033; --muted:#5d6678; --line:#dfe5ef; --panel:#f7f9fc; --brand:#5c4ee5; --brand2:#00a6a6; --good:#19764b; --warn:#9a6410; --bad:#ad3340; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; color:var(--ink); background:#eef2f8; font:16px/1.6 Inter,Segoe UI,Arial,sans-serif; }
+    header { color:white; background:linear-gradient(125deg,#211b5f,#5848dc 58%,#008c99); padding:64px 24px 54px; }
+    header .wrap, main { max-width:1180px; margin:auto; }
+    h1 { margin:0 0 12px; font-size:clamp(2.2rem,5vw,4rem); line-height:1.05; letter-spacing:-.04em; }
+    header p { max-width:820px; margin:0; font-size:1.15rem; color:#e8e7ff; }
+    .chips { display:flex; flex-wrap:wrap; gap:9px; margin-top:24px; }
+    .chip { padding:5px 11px; border:1px solid #ffffff55; border-radius:999px; background:#ffffff16; font-size:.84rem; }
+    nav { position:sticky; top:0; z-index:10; background:#fff; border-bottom:1px solid var(--line); box-shadow:0 3px 12px #23304a10; }
+    nav div { max-width:1180px; margin:auto; padding:11px 20px; display:flex; gap:18px; overflow:auto; }
+    nav a { color:#3d4660; text-decoration:none; white-space:nowrap; font-size:.9rem; font-weight:600; }
+    nav a:hover { color:var(--brand); }
+    main { padding:30px 20px 70px; }
+    section { background:white; margin:20px 0; padding:30px; border:1px solid var(--line); border-radius:16px; box-shadow:0 8px 30px #1b27500a; }
+    h2 { margin:0 0 18px; font-size:1.65rem; letter-spacing:-.02em; }
+    h3 { margin:26px 0 8px; font-size:1.12rem; }
+    p { margin:8px 0 14px; }
+    code { background:#eef1f7; padding:2px 6px; border-radius:5px; font-size:.9em; }
+    pre { padding:18px; overflow:auto; border-radius:10px; color:#e9efff; background:#172033; line-height:1.5; }
+    .lead { color:var(--muted); font-size:1.05rem; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:15px; }
+    .card { padding:18px; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+    .card h3 { margin:0 0 7px; color:#30268f; }
+    .card p { margin:0; color:var(--muted); }
+    .architecture { display:grid; gap:12px; grid-template-columns:repeat(5,1fr); align-items:stretch; margin:25px 0; }
+    .node { position:relative; min-height:112px; padding:15px; border-radius:12px; border:2px solid #cfd7e7; background:#fff; text-align:center; }
+    .node b { display:block; margin-bottom:5px; color:#29217c; }
+    .node:not(:last-child)::after { content:"→"; position:absolute; right:-25px; top:34%; color:var(--brand); font-size:1.7rem; z-index:2; }
+    .node.queue { border-color:#efad4a; background:#fff9ef; }
+    .node.data { border-color:#49a99e; background:#effbf9; }
+    .flow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:16px; border-radius:12px; background:#f4f3ff; }
+    .state { padding:8px 11px; border-radius:8px; background:white; border:1px solid #cbc6ff; font-weight:650; }
+    .arrow { color:var(--brand); font-weight:bold; }
+    table { width:100%; border-collapse:collapse; margin:12px 0; }
+    th,td { padding:11px 12px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+    th { background:#f3f5fa; font-size:.88rem; }
+    .ok { color:var(--good); font-weight:700; }
+    .note { padding:14px 17px; margin:14px 0; border-left:4px solid var(--brand); background:#f3f2ff; border-radius:5px; }
+    .warning { border-color:#d88e20; background:#fff8eb; }
+    details { margin:10px 0; border:1px solid var(--line); border-radius:10px; background:#fff; }
+    summary { cursor:pointer; padding:14px 16px; font-weight:700; color:#29217c; }
+    details > div { padding:0 16px 16px; color:#3f485a; }
+    .decision { border-left:4px solid var(--brand2); }
+    footer { text-align:center; color:var(--muted); padding:26px; }
+    @media (max-width:850px) { .architecture { grid-template-columns:1fr; } .node:not(:last-child)::after { content:"↓"; right:auto; left:49%; top:auto; bottom:-30px; } section { padding:22px; } }
+    @media print { nav { display:none; } body { background:white; } section { break-inside:avoid; box-shadow:none; } header { padding:30px; } }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Driving Licence<br>Onboarding Workflow</h1>
+    <p>Architecture, layer responsibilities, workflow behavior, reliability model, and technical-review guide for the Senior .NET Developer assignment.</p>
+    <div class="chips"><span class="chip">.NET 8</span><span class="chip">ASP.NET Core</span><span class="chip">PostgreSQL</span><span class="chip">RabbitMQ</span><span class="chip">MassTransit</span><span class="chip">Blazor + Radzen</span><span class="chip">Aspire + OpenTelemetry</span></div>
+  </div>
+</header>
+
+<nav><div>
+  <a href="#overview">Overview</a><a href="#layers">Layers</a><a href="#flows">Flows</a><a href="#workflow">Workflow</a><a href="#reliability">Reliability</a><a href="#api">API</a><a href="#observability">Observability</a><a href="#testing">Testing</a><a href="#review">Review Q&amp;A</a><a href="#production">Production</a>
+</div></nav>
+
+<main>
+  <section id="overview">
+    <h2>1. Architecture overview</h2>
+    <p class="lead">The solution is a modular layered architecture with a domain-centric state machine and asynchronous processing. It keeps the exercise understandable while implementing the important distributed-system guarantees.</p>
+    <div class="architecture">
+      <div class="node"><b>Blazor Web</b>Radzen UI submits and tracks applications.</div>
+      <div class="node"><b>ASP.NET Core API</b>HTTP contract, queries, submissions, manual review.</div>
+      <div class="node data"><b>PostgreSQL</b>Application, audit, outbox, inbox/deduplication.</div>
+      <div class="node queue"><b>RabbitMQ</b>Durable asynchronous message transport.</div>
+      <div class="node"><b>Worker</b>Validation, photo simulation, risk and state transitions.</div>
+    </div>
+    <div class="note decision"><b>Architectural choice:</b> a custom state machine was selected instead of Temporal, Elsa, or a MassTransit Saga because the workflow is short, linear, and has no timers, parallel branches, or compensation. This minimizes accidental complexity while leaving upgrade paths clear.</div>
+  </section>
+
+  <section id="layers">
+    <h2>2. Layers and responsibilities</h2>
+    <div class="grid">
+      <article class="card"><h3>DrivingLicence.Domain</h3><p>Contains the application aggregate, statuses, legal-transition map, audit-entry creation, business checks, workflow options, and <code>ApplicationSubmitted</code> contract. It has no ASP.NET, EF Core, RabbitMQ, or UI dependency.</p></article>
+      <article class="card"><h3>DrivingLicence.Infrastructure</h3><p>Defines <code>AppDbContext</code>, entity mappings, PostgreSQL migrations, optimistic concurrency through <code>xmin</code>, outbox rows, processed-message markers, and safe startup migration/legacy adoption.</p></article>
+      <article class="card"><h3>DrivingLicence.Api</h3><p>Accepts multipart submissions, persists application + initial audit + outbox atomically, exposes status/history, validates reviewer credentials, and performs guarded manual approval or rejection.</p></article>
+      <article class="card"><h3>DrivingLicence.Worker</h3><p>Consumes RabbitMQ messages and executes data validation, deterministic photo scoring, photo checks, risk assessment, automatic approval, failure, or manual-review routing.</p></article>
+      <article class="card"><h3>DrivingLicence.Web</h3><p>Optional Blazor interactive-server interface using Radzen controls. It creates multipart requests, polls status, displays history, and offers manual-review actions.</p></article>
+      <article class="card"><h3>AppHost + ServiceDefaults</h3><p>Aspire describes the local dependency graph. ServiceDefaults adds service discovery, HTTP resilience, health checks, structured telemetry, traces, runtime metrics, and OTLP export.</p></article>
+      <article class="card"><h3>DrivingLicence.Tests</h3><p>Unit, API, PostgreSQL, legacy-upgrade, and RabbitMQ end-to-end tests. Real dependency containers are created with Testcontainers.</p></article>
+    </div>
+    <h3>Dependency direction</h3>
+    <pre>Web → API
+API → Domain + Infrastructure
+Worker → Domain + Infrastructure
+Infrastructure → Domain
+Domain → no external framework</pre>
+    <p>This preserves the most valuable Clean Architecture property: business rules remain independent of delivery and persistence frameworks, without introducing unnecessary repository or handler abstractions.</p>
+  </section>
+
+  <section id="flows">
+    <h2>3. End-to-end processing flows</h2>
+    <h3>Submission and asynchronous processing</h3>
+    <ol>
+      <li>The client sends personal fields and a face photo as <code>multipart/form-data</code>.</li>
+      <li>The API validates the HTTP contract and optional <code>Idempotency-Key</code>.</li>
+      <li>The photo is written to configured file storage; only its opaque path and metadata are stored in PostgreSQL.</li>
+      <li>The API creates the application in <code>Submitted</code>, its first audit entry, and an outbox row in one database commit.</li>
+      <li>The response is <code>202 Accepted</code>; workflow execution is not performed inside the HTTP request.</li>
+      <li>The outbox dispatcher publishes <code>ApplicationSubmitted</code> to RabbitMQ and marks the row published.</li>
+      <li>The Worker consumes the message, performs checks, updates state, appends audit records, and stores the processed-message marker in one commit.</li>
+    </ol>
+    <h3>Manual review</h3>
+    <ol>
+      <li>The reviewer reads an application whose state is <code>PendingManualReview</code>.</li>
+      <li>The API verifies <code>X-Reviewer-Key</code> and checks the current state.</li>
+      <li>Approve transitions to <code>Approved</code>; Reject transitions to <code>Rejected</code> and records the supplied reason.</li>
+      <li>Any other starting state returns <code>409 Conflict</code>; the aggregate also rejects illegal transitions.</li>
+    </ol>
+  </section>
+
+  <section id="workflow">
+    <h2>4. Workflow and business rules</h2>
+    <div class="flow"><span class="state">Submitted</span><span class="arrow">→</span><span class="state">ValidatingData</span><span class="arrow">→</span><span class="state">CheckingPhoto</span><span class="arrow">→</span><span class="state">RiskAssessment</span><span class="arrow">→</span><span class="state">Approved</span></div>
+    <div class="flow"><span class="state">RiskAssessment</span><span class="arrow">→</span><span class="state">PendingManualReview</span><span class="arrow">→</span><span class="state">Approved / Rejected</span></div>
+    <div class="flow"><span class="state">ValidatingData / CheckingPhoto</span><span class="arrow">→</span><span class="state">Failed</span></div>
+    <table><thead><tr><th>Stage</th><th>Rules</th><th>Outcome</th></tr></thead><tbody>
+      <tr><td>HTTP contract</td><td>Required form values, valid email shape, required non-empty photo.</td><td><code>400</code> before creating an application.</td></tr>
+      <tr><td>Data validation</td><td>Required identity data, valid email, applicant aged 18 or older.</td><td>Continue or <code>Failed</code> with reason.</td></tr>
+      <tr><td>Photo check</td><td>JPEG/PNG, minimum size, simulated score at least 40.</td><td>Continue or <code>Failed</code> with reason.</td></tr>
+      <tr><td>Risk assessment</td><td>Manual review if below 21, non-B category, configured watchlist match, or score below 70.</td><td><code>PendingManualReview</code> or automatic <code>Approved</code>.</td></tr>
+    </tbody></table>
+    <p>The photo score is deterministically derived from the application ID (30–100). It is reproducible for tests and demonstrations and deliberately does not claim to implement biometric verification.</p>
+  </section>
+
+  <section id="reliability">
+    <h2>5. Reliability and failure handling</h2>
+    <div class="grid">
+      <article class="card"><h3>Transactional outbox</h3><p>Application, initial audit entry, and publication request commit together. A queue outage cannot lose the intent to process an accepted application.</p></article>
+      <article class="card"><h3>At-least-once delivery</h3><p>The same stable message ID may be published or delivered more than once. Correctness does not depend on exactly-once transport.</p></article>
+      <article class="card"><h3>Idempotent consumer</h3><p><code>processed_messages</code> records consumed IDs. The marker and workflow updates use the same EF Core transaction, making redelivery a no-op.</p></article>
+      <article class="card"><h3>Retries and error queue</h3><p>MassTransit applies exponential retry. Exhausted deliveries are moved to the generated <code>driving-licence-applications_error</code> queue for inspection/replay.</p></article>
+      <article class="card"><h3>Optimistic concurrency</h3><p>PostgreSQL <code>xmin</code> prevents two reviewers or processes from silently overwriting the same application version.</p></article>
+      <article class="card"><h3>Audit durability</h3><p>Status changes go through the aggregate transition method, which validates legality and always creates a history entry.</p></article>
+    </div>
+    <h3>Failure scenarios requested by the exercise</h3>
+    <table><thead><tr><th>Scenario</th><th>Behavior</th></tr></thead><tbody>
+      <tr><td>Same message processed twice</td><td>The second delivery finds its processed-message ID and exits. The current-status guard provides a second defense.</td></tr>
+      <tr><td>API saves but queue publish fails</td><td>The unpublished outbox row remains durable and the dispatcher retries it on a later cycle.</td></tr>
+      <tr><td>Worker crashes before commit</td><td>No partial workflow update commits; RabbitMQ redelivers and the Worker retries.</td></tr>
+      <tr><td>Worker crashes after commit, before acknowledgement</td><td>RabbitMQ may redeliver, but the committed processed marker makes it a no-op.</td></tr>
+      <tr><td>Business validation fails</td><td>The application transitions to <code>Failed</code> and the reason is persisted in audit history.</td></tr>
+      <tr><td>Unexpected infrastructure failure</td><td>The exception is logged, retried, and ultimately sent to the error queue; it is not misrepresented as a business rejection.</td></tr>
+    </tbody></table>
+  </section>
+
+  <section id="api">
+    <h2>6. HTTP API and storage choices</h2>
+    <table><thead><tr><th>Endpoint</th><th>Purpose</th><th>Main responses</th></tr></thead><tbody>
+      <tr><td><code>POST /api/applications</code></td><td>Multipart application/photo submission; supports <code>Idempotency-Key</code>.</td><td>202, 400</td></tr>
+      <tr><td><code>GET /api/applications/{id}</code></td><td>Current status and timestamps.</td><td>200, 404</td></tr>
+      <tr><td><code>GET /api/applications/{id}/history</code></td><td>Chronological transition audit.</td><td>200, 404</td></tr>
+      <tr><td><code>POST /api/applications/{id}/approve</code></td><td>Authenticated manual approval.</td><td>200, 401, 404, 409</td></tr>
+      <tr><td><code>POST /api/applications/{id}/reject</code></td><td>Authenticated rejection with 3–500 character reason.</td><td>200, 400, 401, 404, 409</td></tr>
+    </tbody></table>
+    <div class="note"><b>Photo choice:</b> multipart avoids base64's approximate 33% size overhead. Local file storage is sufficient for the exercise. Production should use an injected object-storage implementation with signature validation, malware scanning, encryption, retention, signed access, and orphan cleanup.</div>
+    <p>Manual endpoints use a development API key to demonstrate an authorization boundary. Production should use OIDC/JWT authentication, reviewer roles, and include the authenticated reviewer identity in audit entries.</p>
+  </section>
+
+  <section id="observability">
+    <h2>7. Operations and observability</h2>
+    <ul>
+      <li><b>Structured logs:</b> JSON console logs include message IDs, application IDs, failures, and framework events.</li>
+      <li><b>OpenTelemetry:</b> ASP.NET Core, outbound HTTP, runtime metrics, traces, and logs export through OTLP when configured.</li>
+      <li><b>Aspire dashboard:</b> resource status, logs, traces, metrics, endpoints, PostgreSQL, and RabbitMQ management links.</li>
+      <li><b>Health:</b> liveness <code>/alive</code> and readiness <code>/health</code>; API readiness includes PostgreSQL and MassTransit.</li>
+      <li><b>RabbitMQ management:</b> inspect the main queue, <code>_error</code> queue, consumers, connections, bindings, and delivery rates.</li>
+    </ul>
+    <div class="note warning"><b>Local versus production:</b> Docker Compose uses HTTP for a zero-friction evaluator experience. Aspire supplies development HTTPS. Production TLS should terminate at managed ingress/reverse-proxy infrastructure.</div>
+  </section>
+
+  <section id="testing">
+    <h2>8. Test strategy</h2>
+    <table><thead><tr><th>Test level</th><th>What it proves</th></tr></thead><tbody>
+      <tr><td>Domain unit tests</td><td>Illegal transitions, audit creation, age validation, risk rules, and photo-quality failure.</td></tr>
+      <tr><td>API integration tests</td><td>Real routing/model binding, multipart submission, idempotency, authentication, conflicts, approval, rejection, and history.</td></tr>
+      <tr><td>PostgreSQL integration</td><td>Checked-in migration and atomic persistence of application, history, idempotency key, and outbox.</td></tr>
+      <tr><td>Legacy upgrade</td><td>Non-destructive adoption of an older <code>EnsureCreated</code> database, including a partially created migration-history table.</td></tr>
+      <tr><td>RabbitMQ end-to-end</td><td>Outbox publication, real broker transport, Worker consumption, automatic approval, and processed-message persistence.</td></tr>
+    </tbody></table>
+    <pre>dotnet test DrivingLicenceOnboarding.sln</pre>
+    <p>The complete suite contains 19 tests and requires Docker for Testcontainers integration tests.</p>
+  </section>
+
+  <section id="review">
+    <h2>9. Technical-review questions and answers</h2>
+    <details open><summary>Why was this architecture chosen?</summary><div>It isolates business rules, keeps HTTP work short, makes accepted submissions durable before queue delivery, and demonstrates realistic failure handling without over-engineering a small linear workflow.</div></details>
+    <details><summary>How are invalid state transitions prevented?</summary><div>The domain aggregate exposes <code>TransitionTo</code>, which checks a single allowed-transition map. Status setters are private. Manual endpoints additionally return a clear 409 before invoking the domain operation.</div></details>
+    <details><summary>How are messages processed?</summary><div>The API commits an outbox record. A dispatcher publishes its stable ID to RabbitMQ. A MassTransit Worker consumes it, loads the aggregate, executes checks, and commits state/history plus the processed marker.</div></details>
+    <details><summary>Is the consumer idempotent?</summary><div>Yes. It checks <code>processed_messages</code> by message ID, persists the marker in the same transaction as state changes, and ignores already advanced application states.</div></details>
+    <details><summary>What happens when services crash?</summary><div>API publication intent remains in PostgreSQL. Uncommitted Worker work rolls back and is redelivered. Committed work is protected from duplicate execution by the processed marker.</div></details>
+    <details><summary>Why not use full Clean Architecture, CQRS, or a workflow engine?</summary><div>The dependency direction is already domain-centric. Additional interfaces, generic repositories, commands, and framework machinery would provide little value for this bounded exercise. They become useful when use cases, integrations, teams, or workflow complexity grow.</div></details>
+    <details><summary>What was AI-assisted?</summary><div>AI assisted with scaffolding, implementation drafts, documentation, debugging, and test generation. Architecture and trade-offs were reviewed, the application was executed, and behavior was verified through unit and real-container integration tests.</div></details>
+  </section>
+
+  <section id="production">
+    <h2>10. Assumptions, shortcuts, and production improvements</h2>
+    <ul>
+      <li>Run reviewed migrations from a single deployment job instead of every application process.</li>
+      <li>Replace shared reviewer API keys with an identity provider, roles, and reviewer identity in the audit log.</li>
+      <li>Replace local photo files with object storage and add scanning, validation, encryption, lifecycle, and orphan cleanup.</li>
+      <li>Add outbox row leasing or <code>FOR UPDATE SKIP LOCKED</code> for efficient multi-replica dispatch.</li>
+      <li>Add rate limiting, secret management, PII redaction/encryption, retention/deletion policies, and security review.</li>
+      <li>Add alerting, dashboards, error-queue replay tooling, and deeper RabbitMQ readiness checks.</li>
+      <li>Expand tests for duplicate concurrent submissions, duplicate concurrent delivery, error-queue routing, and outbox recovery.</li>
+      <li>Split workflow stages into separate messages only when real external checks become slow and require independent retries or compensation.</li>
+    </ul>
+    <h3>Documented assumptions</h3>
+    <ul>
+      <li><code>Failed</code> represents validation or technical-check failure; <code>Rejected</code> represents a manual business decision.</li>
+      <li>No automatic rejection rule was invented because the assignment specifies manual-review conditions and otherwise permits approval.</li>
+      <li>Malformed HTTP requests are rejected with 400 before application creation; valid submissions that fail workflow rules are persisted as <code>Failed</code>.</li>
+      <li>The UI is a bonus client; the API, Worker, database, queue, Compose setup, tests, and README remain the assignment's core deliverables.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>11. Requirement coverage</h2>
+    <table><thead><tr><th>Exercise requirement</th><th>Status</th><th>Evidence</th></tr></thead><tbody>
+      <tr><td>ASP.NET Core Web API</td><td class="ok">Complete</td><td>Submission, status, history, approve, reject.</td></tr>
+      <tr><td>Database persistence</td><td class="ok">Complete</td><td>PostgreSQL, EF Core, migrations, concurrency.</td></tr>
+      <tr><td>Queue + background worker</td><td class="ok">Complete</td><td>RabbitMQ, MassTransit, Worker consumer.</td></tr>
+      <tr><td>Workflow/state machine</td><td class="ok">Complete</td><td>All required states and guarded transitions.</td></tr>
+      <tr><td>Docker Compose</td><td class="ok">Complete</td><td>API, Worker, database, queue, bonus Web UI.</td></tr>
+      <tr><td>Audit trail</td><td class="ok">Complete</td><td>Every domain transition persisted and queryable.</td></tr>
+      <tr><td>Structured logging + Swagger</td><td class="ok">Complete</td><td>JSON logs and XML-documented OpenAPI.</td></tr>
+      <tr><td>Automated tests</td><td class="ok">Complete</td><td>19 unit and container-backed tests.</td></tr>
+      <tr><td>README and design decisions</td><td class="ok">Complete</td><td>Run instructions, trade-offs, reliability, assumptions, AI usage.</td></tr>
+    </tbody></table>
+  </section>
+</main>
+<footer>Driving Licence Onboarding Workflow — Architecture and Technical Review</footer>
+</body>
+</html>

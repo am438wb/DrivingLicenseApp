@@ -2,6 +2,8 @@
 
 A .NET backend and Blazor/Radzen interface that accepts driving-licence applications, persists them in PostgreSQL, and processes them asynchronously through RabbitMQ. It includes a deterministic simulated photo check, configurable risk rules, manual review, a durable audit trail, retries, idempotent consumption, Aspire orchestration, and OpenTelemetry.
 
+For a detailed visual explanation of the architecture, layer responsibilities, reliability model, and technical-review questions, open [`docs/architecture.html`](docs/architecture.html) in a browser.
+
 ## Run with Aspire (recommended)
 
 Prerequisites: .NET 8 SDK or newer, Docker Desktop, and HTTPS development certificates (`dotnet dev-certs https --trust`). All projects target .NET 8.
