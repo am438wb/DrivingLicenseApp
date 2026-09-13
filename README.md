@@ -16,7 +16,17 @@ Aspire creates and injects PostgreSQL/RabbitMQ connection details and the API se
 
 ## Run with Docker Compose
 
-Prerequisite: Docker with Compose.
+Prerequisites: Docker with Compose and the .NET SDK for creating a trusted local HTTPS certificate.
+
+Create and trust the development certificate once from the repository root (PowerShell):
+
+```powershell
+New-Item -ItemType Directory -Force .certs
+dotnet dev-certs https -ep .certs/aspnetapp.pfx -p dev-certificate-password
+dotnet dev-certs https --trust
+```
+
+The `.certs` directory and certificate are ignored by Git and are mounted read-only into the API and Web containers. The password is a local development value and can be changed by setting `HTTPS_CERTIFICATE_PASSWORD` and using the same value when exporting the certificate.
 
 ```bash
 docker compose up --build
@@ -24,15 +34,17 @@ docker compose up --build
 
 Then open:
 
-- Swagger UI: http://localhost:8080/swagger
-- Blazor/Radzen UI: http://localhost:8081
-- API health: http://localhost:8080/health
+- Swagger UI: https://localhost:8443/swagger
+- Blazor/Radzen UI: https://localhost:8444
+- API health: https://localhost:8443/health
 - RabbitMQ management: http://localhost:15672 (`guest` / `guest`)
+
+HTTP remains available on ports `8080` and `8081` for local compatibility and container-to-container communication. Browser-facing examples below use HTTPS.
 
 Submit an application (the example deliberately uses an applicant under 21, so a valid photo score leads to manual review):
 
 ```bash
-curl -X POST http://localhost:8080/api/applications \
+curl -X POST https://localhost:8443/api/applications \
   -H "Idempotency-Key: demo-request-001" \
   -F "firstName=John" \
   -F "lastName=Doe" \

@@ -3,25 +3,32 @@ services:
     build:
       context: .
       dockerfile: src/DrivingLicence.Web/Dockerfile
-    ports: ["8081:8080"]
+    ports: ["8081:8080", "8444:8443"]
     environment:
-      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080;https://+:8443
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/aspnetapp.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${HTTPS_CERTIFICATE_PASSWORD:-dev-certificate-password}
       ApiBaseUrl: http://api:8080
       Reviewer__ApiKey: dev-reviewer-key
+    volumes: ["./.certs:/https:ro"]
     depends_on: [api]
     restart: unless-stopped
   api:
     build:
       context: .
       dockerfile: src/DrivingLicence.Api/Dockerfile
-    ports: ["8080:8080"]
+    ports: ["8080:8080", "8443:8443"]
     environment:
-      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080;https://+:8443
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/aspnetapp.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${HTTPS_CERTIFICATE_PASSWORD:-dev-certificate-password}
       ConnectionStrings__Database: Host=database;Database=licences;Username=postgres;Password=postgres
       RabbitMq__Host: queue
       PhotoStorage__Path: /data/photos
       Reviewer__ApiKey: dev-reviewer-key
-    volumes: ["photos:/data/photos"]
+    volumes: ["photos:/data/photos", "./.certs:/https:ro"]
     depends_on:
       database: { condition: service_healthy }
       queue: { condition: service_healthy }
